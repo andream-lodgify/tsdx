@@ -60,6 +60,7 @@ export function createRollupConfig(
     name: string;
     target: 'node' | 'browser';
     tsconfig?: string;
+    extconfig?: string;
   }
 ) {
   const shouldMinify =
@@ -74,8 +75,10 @@ export function createRollupConfig(
   ]
     .filter(Boolean)
     .join('.');
-
-  return {
+  const extConfig: { plugins: any[]; [prop: string]: any } = opts.extconfig
+    ? require(require.resolve(opts.extconfig))
+    : null;
+  const standardConfg = {
     // Tell Rollup the entry point to the package
     input: opts.input,
     // Tell Rollup which packages to ignore
@@ -196,4 +199,10 @@ export function createRollupConfig(
         }),
     ],
   };
+  return extConfig
+    ? {
+        ...standardConfg,
+        plugins: [...standardConfg.plugins, ...extConfig.plugins],
+      }
+    : standardConfg;
 }

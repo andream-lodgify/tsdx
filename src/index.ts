@@ -86,10 +86,12 @@ async function getInputs(entries: string[], source?: string) {
 
   return concatAllArray(inputs);
 }
-function createBuildConfigs(
+async function createBuildConfigs(
   opts: any
-): Array<RollupOptions & { output: OutputOptions }> {
-  return concatAllArray(
+): Promise<Array<RollupOptions & { output: OutputOptions }>> {
+  const hasExtendsConfiguration = await isFile(resolveApp('tsdx.extends.js'));
+  if (hasExtendsConfiguration) opts.extconfig = resolveApp('tsdx.extends.js');
+  const result = concatAllArray(
     opts.input.map((input: string) => [
       opts.format.includes('cjs') &&
         createRollupConfig('cjs', { env: 'development', ...opts, input }),
@@ -103,6 +105,7 @@ function createBuildConfigs(
         createRollupConfig('umd', { env: 'production', ...opts, input }),
     ])
   ).filter(Boolean);
+  return result;
 }
 
 async function moveTypes() {
@@ -282,7 +285,7 @@ prog
   .example('build --tsconfig ./tsconfig.foo.json')
   .action(async (dirtyOpts: any) => {
     const opts = await normalizeOpts(dirtyOpts);
-    const buildConfigs = createBuildConfigs(opts);
+    const buildConfigs = await createBuildConfigs(opts);
     await ensureDistFolder();
     if (opts.format.includes('cjs')) {
       await writeCjsEntryFile(opts.name);
@@ -339,7 +342,7 @@ prog
   .example('build --tsconfig ./tsconfig.foo.json')
   .action(async (dirtyOpts: any) => {
     const opts = await normalizeOpts(dirtyOpts);
-    const buildConfigs = createBuildConfigs(opts);
+    const buildConfigs = await createBuildConfigs(opts);
     await ensureDistFolder();
     if (opts.format.includes('cjs')) {
       const promise = writeCjsEntryFile(opts.name).catch(logError);
